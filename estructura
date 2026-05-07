@@ -1,0 +1,287 @@
+class Jugador:
+    def __init__(self, nombre):
+        self.nombre = nombre
+        self.estado = "Activo"
+        self.turnos = 0
+
+    def __str__(self):
+        return f"{self.nombre} | {self.estado} | Turnos: {self.turnos}"
+
+
+class Nodo:
+    def __init__(self, jugador):
+        self.jugador = jugador
+        self.sig = None
+
+
+class ListaCircular:
+
+    def __init__(self):
+        self.cabeza = None
+        self.tam = 0
+        self.total_turnos = 0
+
+    def recorrer(self):
+        if not self.cabeza:
+            return
+
+        t = self.cabeza
+
+        while True:
+            yield t
+            t = t.sig
+
+            if t == self.cabeza:
+                break
+
+    def ultimo(self):
+        return next(
+            (n for n in self.recorrer() if n.sig == self.cabeza),
+            None
+        )
+
+    def buscar(self, nombre):
+        return next(
+            (
+                n for n in self.recorrer()
+                if n.jugador.nombre.lower() == nombre.lower().strip()
+            ),
+            None
+        )
+
+    def insertar(self, nombre):
+
+        if self.buscar(nombre):
+            return print("Jugador ya registrado.")
+
+        nuevo = Nodo(Jugador(nombre))
+
+        if not self.cabeza:
+
+            self.cabeza = nuevo
+            nuevo.sig = nuevo
+
+        else:
+
+            u = self.ultimo()
+            u.sig = nuevo
+            nuevo.sig = self.cabeza
+
+        self.tam += 1
+
+        print(f"{nombre} registrado.")
+
+    def mostrar(self):
+
+        if not self.cabeza:
+            return print("No hay jugadores.")
+
+        print("\n====== JUGADORES ======")
+
+        for i, n in enumerate(self.recorrer(), 1):
+            print(f"{i}. {n.jugador}")
+
+    def eliminar(self, nombre):
+
+        if self.tam <= 1:
+            return print("Debe quedar mínimo 1 jugador.")
+
+        nodo = self.buscar(nombre)
+
+        if not nodo:
+            return print("Jugador no encontrado.")
+
+        if nodo == self.cabeza:
+
+            u = self.ultimo()
+
+            self.cabeza = nodo.sig
+            u.sig = self.cabeza
+
+        else:
+
+            ant = next(
+                n for n in self.recorrer()
+                if n.sig == nodo
+            )
+
+            ant.sig = nodo.sig
+
+        self.tam -= 1
+
+        print(f"{nombre} eliminado.")
+
+        self.mostrar()
+
+    def activos(self):
+        return sum(
+            n.jugador.estado == "Activo"
+            for n in self.recorrer()
+        )
+
+    def cambiar_estado(self, nombre, estado):
+
+        nodo = self.buscar(nombre)
+
+        if not nodo:
+            return print("Jugador no encontrado.")
+
+        if estado == "Pausado" and self.activos() == 1:
+            return print("No puede pausarse el último jugador activo.")
+
+        nodo.jugador.estado = estado
+
+        print(
+            f"{nodo.jugador.nombre} ahora está {estado}."
+        )
+
+        if self.activos() == 1:
+            self.ganador()
+
+    def simular(self, n=10):
+
+        if self.tam < 6:
+            return print("Debe registrar mínimo 6 jugadores.")
+
+        if self.activos() < 2:
+            return print("Debe haber mínimo 2 jugadores activos.")
+
+        t = self.cabeza
+
+        print(f"\n====== SIMULACIÓN ({n} TURNOS) ======")
+
+        for i in range(1, n + 1):
+
+            while t.jugador.estado == "Pausado":
+                t = t.sig
+
+            t.jugador.turnos += 1
+            self.total_turnos += 1
+
+            print(f"Turno {i}: {t.jugador.nombre}")
+
+            t = t.sig
+
+    def estadisticas(self):
+
+        if not self.cabeza:
+            return print("No hay jugadores.")
+
+        jugadores = [n.jugador for n in self.recorrer()]
+        activos = self.activos()
+
+        mayor = max(jugadores, key=lambda j: j.turnos)
+
+        print("\n====== ESTADÍSTICAS ======")
+        print("Total jugadores:", self.tam)
+        print("Jugadores activos:", activos)
+        print("Jugadores pausados:", self.tam - activos)
+        print("Turnos realizados:", self.total_turnos)
+        print(f"Más turnos: {mayor.nombre} ({mayor.turnos})")
+
+    def ganador(self):
+
+        if self.activos() != 1:
+            return print("Aún no hay ganador.")
+
+        g = next(
+            n.jugador for n in self.recorrer()
+            if n.jugador.estado == "Activo"
+        )
+
+        print("\nGANADOR DEL TORNEO")
+        print(f"{g.nombre} con {g.turnos} turnos")
+
+
+def menu():
+
+    torneo = ListaCircular()
+
+    while True:
+
+        print("""
+========= TORNEO =========
+
+1. Registrar jugador
+2. Mostrar jugadores
+3. Buscar jugador
+4. Eliminar jugador
+5. Pausar jugador
+6. Reactivar jugador
+7. Simular turnos
+8. Estadísticas
+9. Ganador final
+0. Salir
+""")
+
+        op = input("Opción: ")
+
+        if op == "1":
+
+            torneo.insertar(
+                input("Nombre: ")
+            )
+
+        elif op == "2":
+
+            torneo.mostrar()
+
+        elif op == "3":
+
+            n = torneo.buscar(
+                input("Buscar: ")
+            )
+
+            print(
+                f"\nJugador encontrado\n{n.jugador}"
+                if n
+                else "Jugador no encontrado."
+            )
+
+        elif op == "4":
+
+            torneo.eliminar(
+                input("Eliminar: ")
+            )
+
+        elif op == "5":
+
+            torneo.cambiar_estado(
+                input("Pausar: "),
+                "Pausado"
+            )
+
+        elif op == "6":
+
+            torneo.cambiar_estado(
+                input("Reactivar: "),
+                "Activo"
+            )
+
+        elif op == "7":
+
+            try:
+                n = int(input("Cantidad turnos: "))
+            except:
+                n = 10
+
+            torneo.simular(n)
+
+        elif op == "8":
+
+            torneo.estadisticas()
+
+        elif op == "9":
+
+            torneo.ganador()
+
+        elif op == "0":
+
+            print("Programa finalizado.")
+            break
+
+        else:
+            print("Opción inválida.")
+
+
+menu()
